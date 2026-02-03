@@ -20,7 +20,7 @@ import { get, post } from './http'
  */
 
 // 用户登录
-export const userLogin = (p) => post('/user/login', p, false)
+export const userLogin = (p) => post('/user/login', p, true)
 // 获取登录状态及用户信息
 export const getUserInfo = (p) => get('/user/userinfo', p)
 // 获取登录状态及用户信息

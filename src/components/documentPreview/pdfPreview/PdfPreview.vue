@@ -250,6 +250,8 @@ export default {
     this.src = this.getFilePath(this.fileInfo)
     // 'http://storage.xuetangx.com/public_assets/xuetangx/PDF/PlayerAPI_v1.0.6.pdf'
     // 有时PDF文件地址会出现跨域的情况,这里最好处理一下
+    debugger
+    console.log(pdf)
     this.src = pdf.createLoadingTask(this.src)
     this.handlePdfTask(this.src)
     // this.src.promise.then((pdf) => {

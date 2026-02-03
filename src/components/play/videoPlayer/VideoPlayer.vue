@@ -4,8 +4,8 @@
        :class="!pip ? 'transition-fade-in' : 'transition-fade-out'">
     <div class="video-header text-elip inline-block-v-middle">
       <div class="head-title text-elip inline-block-v-middle"
-           :title="activeFileObj.fileName">
-        {{ activeFileObj.fileName }}
+           title="activeFileObj.fileName">
+        {{ activeFileObj?.fileName || '测试视频' }}
       </div>
       <div class="header-right inline-block-v-middle">
         <i class="iconfont icon-tishi hot-key" title="快捷键说明"></i>
@@ -43,15 +43,29 @@
     <div class="player-box-main">
 
       <div class="plyr-main" :onBlur="blur">
-        <vue-plyr :options="options" ref="plyr">
-          <video id="player" playsinline
-                 :autoplay="true"
-                 :global="true"
-                 :controls="controls">
-            <source :src="getMediaStreamPath(this.videoList[this.defaultIndex])"
-                    type="video/mp4" />
-          </video>
-        </vue-plyr>
+        <!--<media-video-layout>-->
+        <media-player :title="activeFileObj?.fileName" id="player"
+                      ref="player"
+                      crossOrigin
+                      autoplay
+                      @provider-change="onProviderChange"
+                      @can-play="onCanPlay">
+          <media-provider>
+            <source :src="src" type="video/mp4" />
+          </media-provider>
+          <!--thumbnails="https://files.vidstack.io/sprite-fight/thumbnails.vtt"-->
+          <media-video-layout></media-video-layout>
+        </media-player>
+        <!--</media-video-layout>-->
+        <!--<vue-plyr :options="options" ref="plyr">-->
+        <!--  <video id="player" playsinline-->
+        <!--         :autoplay="true"-->
+        <!--         :global="true"-->
+        <!--         :controls="controls">-->
+        <!--    <source :src="getMediaStreamPath(this.videoList[this.defaultIndex])"-->
+        <!--            type="video/mp4" />-->
+        <!--  </video>-->
+        <!--</vue-plyr>-->
       </div>
       <div class="play-list-main" v-show="!isFoldVideoList">
         <ul class="video-list">
@@ -83,8 +97,29 @@
 </template>
 
 <script>
+import { ref } from 'vue'
 import store from '@/store'
 import { videoHotkey } from '@/libs/map.js'
+
+// Import styles.
+import 'vidstack/player/styles/default/theme.css'
+import 'vidstack/player/styles/default/layouts/audio.css'
+import 'vidstack/player/styles/default/layouts/video.css'
+// Register elements.
+import 'vidstack/player'
+import 'vidstack/player/layouts'
+import 'vidstack/player/ui'
+import 'vidstack/bundle'
+import { MediaPlayerElement } from 'vidstack/elements'
+import { isHLSProvider } from 'vidstack'
+import { playerConfig } from '@/components/play/player-config.js'
+
+const player = ref < MediaPlayerElement > ({})
+// const $src = ref('')
+
+// onMounted(() => {
+//
+// })
 
 export default {
   name: 'VideoPlayer',
@@ -92,9 +127,11 @@ export default {
   components: {},
   data () {
     return {
+      src: ref(''),
       focusedElement: document.querySelector('#player'),
       videoHotkey,
-      player: Object,
+      vsplayer: null,
+      // player: Object,
       // 视频播放是否可视
       visible: false,
       pip: false,
@@ -165,51 +202,6 @@ export default {
       settings: ['captions', 'quality', 'speed', 'loop'],
       // i18n国际化配置
       options: {
-        i18n: {
-          speed: '速度',
-          normal: '正常',
-          restart: '重新开始',
-          rewind: 'Rewind {seektime}s',
-          play: '播放',
-          pause: '暂停',
-          fastForward: 'Forward {seektime}s',
-          seek: 'Seek',
-          seekLabel: '{currentTime} of {duration}',
-          played: '播放中',
-          buffered: '缓冲中',
-          currentTime: '当前时间',
-          duration: '时长',
-          volume: '音量',
-          mute: '静音',
-          unmute: '取消静音',
-          enableCaptions: '启用字幕',
-          disableCaptions: '禁用字幕',
-          download: '下载',
-          enterFullscreen: '全屏',
-          exitFullscreen: '退出全屏',
-          frameTitle: 'Player for {title}',
-          captions: '字幕',
-          settings: '设置',
-          pip: '画中画',
-          menuBack: 'Go back to previous menu',
-          quality: '质量',
-          loop: '循环',
-          start: '开始',
-          end: '结束',
-          all: '所有',
-          reset: '重置',
-          disabled: '不可用',
-          enabled: '可用',
-          advertisement: '广告',
-          qualityBadge: {
-            2160: '4K',
-            1440: 'HD',
-            1080: 'HD',
-            720: 'HD',
-            576: 'SD',
-            480: 'SD'
-          }
-        },
         resetOnEnd: true,
         invertTime: false,
         global: true,
@@ -228,7 +220,8 @@ export default {
           focused: true,
           global: true
         }
-      }
+      },
+      i18n: playerConfig.i18n
     }
   },
   watch: {
@@ -252,9 +245,6 @@ export default {
     activeFileObj () {
       return this.videoList.length ? this.videoList[this.playIndex] : {}
     },
-    getPlayer () {
-      return this.$refs.plyr.player
-    },
     // 屏幕宽度
     screenWidth () {
       return store.state.common.screenWidth
@@ -266,42 +256,103 @@ export default {
   created () {
 
   },
-  mounted: function() {
+  onBeforeUnmount () {
+    // This call will destroy the player and all child instances.
+    player.value.destroy()
+  },
+
+  mounted: async function() {
     history.pushState(null, null, document.URL)
     window.addEventListener('popstate', function() {
       history.pushState(null, null, document.URL)
     })
-    this.player = this.getPlayer
-    this.player.on('pause', () => this.pauseAction())
-    this.player.on('play', () => this.playAction())
-    this.player.on('pip', () => this.pipAction())
+    // player.value = this.getPlayer
+
+    setTimeout(() => {
+      this.initI18n()
+    })
+    // this.play(0)
+    this.src = this.getMediaStreamPath(this.videoList[0])
+    // player.media.src = this.src
+    // player.on('pause', () => this.pauseAction())
+
+    console.log(this.src)
+    // this.changeSource('audio')
+    // this.player = this.getPlayer
+    // this.player.on('pause', () => this.pauseAction())
+    // this.player.on('play', () => this.playAction())
+    // player.on('pip', (event) => this.pipAction(event))
     // 进入和离开画中画隐藏和显示播放页面
-    this.player.on('enterpictureinpicture', (event) => {
-      var pipWindow = event.pictureInPictureElement // 获取当前 pip 窗口 ?
-      // var main = document.querySelector('.video-main')
-      // main.classList.remove('transition-fade-in')
-      // main.classList.add('transition-fade-out')
-      this.pip = true
-      if (pipWindow !== null) {
-        this.visible = false
-        setTimeout(() => {
-          this.show = false
-        }, 1)
-      } else {
-        return false
-      }
-    })
+    // player.on('enterpictureinpicture', (event) => {
+    //   var pipWindow = event.pictureInPictureElement // 获取当前 pip 窗口 ?
+    //   // var main = document.querySelector('.video-main')
+    //   // main.classList.remove('transition-fade-in')
+    //   // main.classList.add('transition-fade-out')
+    //   this.pip = true
+    //   if (pipWindow !== null) {
+    //     this.visible = false
+    //     setTimeout(() => {
+    //       this.show = false
+    //     }, 1)
+    //   } else {
+    //     return false
+    //   }
+    // })
     // 关闭画中画
-    this.player.on('leavepictureinpicture', (event) => {
-      var main = document.querySelector('.video-main')
-      main.classList.remove('transition-fade-out')
-      main.classList.add('transition-fade-in')
-      this.visible = true
-      this.show = true
-      this.pip = false
+    // player.on('leavepictureinpicture', (event) => {
+    //   var main = document.querySelector('.video-main')
+    //   main.classList.remove('transition-fade-out')
+    //   main.classList.add('transition-fade-in')
+    //   alert('退出画中画')
+    //   this.visible = true
+    //   this.show = true
+    //   this.pip = false
+    // })
+    // Get element reference to call props/methods.
+
+    setTimeout(() => {
+      // this.initEvent()
     })
+
   },
   methods: {
+    initI18n () {
+      const layout = document.querySelector('media-video-layout')
+      layout.translations = this.i18n
+    },
+    initEvent () {
+      debugger
+      const instance = document.querySelector('media-player')
+      const {
+        pictureInPicture
+      } = instance.state
+      // Subscribe to changes.
+
+      instance.addEventListener('picture-in-picture-change', (event) => {
+        debugger
+        const requestEvent = event.request
+        const isActive = event.detail
+      })
+      // instance.subscribe(({ pictureInPicture }) => {
+      //   // ...
+      //   debugger
+      //   console.log(pictureInPicture)
+      //   debugger
+      //   if (pictureInPicture) {
+      //     alert('pictureInPicture')
+      //   }
+      // })
+    },
+    pipAction (event) {
+      debugger
+      console.log(event)
+    },
+    handleEnterPictureinPicture () {
+      debugger
+    },
+    handelLeavePictureinPicture () {
+      debugger
+    },
     blur () {
       this.focusedElement.focus()
     },
@@ -311,27 +362,72 @@ export default {
       el.style.animationPlayState = 'running'
     },
     pauseAction () {
+      debugger
       this.playing = false
       var el = document.querySelector('.playing__bar')
       el.style.animationPlayState = 'paused'
     },
+    getPlayer () {
+      return this.$refs['player']
+    },
     play (index) {
+      // debugger
+      const player = this.getPlayer
       if (this.playIndex === index) {
-        if (this.player.playing) {
-          this.player.pause()
+        if (player.playing) {
+          player.pause()
         } else {
-          this.player.play()
+          player.play()
         }
       } else {
         this.playIndex = index
-        this.player.media.src = this.getMediaStreamPath(this.videoList[index])
-        this.player.play()
+        debugger
+        // this.src = this.getMediaStreamPath(index ? index : this.videoList[this.playIndex])
+        console.log(this.src)
+        // this.player.media.src = $src.value
+        // player.play()
+      }
+    },
+    onCanPlay (event) {
+      // ...
+      console.log(event)
+    },
+    onProviderChange (event) {
+      const provider = event.detail
+      // We can configure provider's here.
+      if (isHLSProvider(provider)) {
+        provider.config = {}
+      }
+    },
+    changeSource (type) {
+      switch (type) {
+        case 'audio':
+          this.src = 'https://files.vidstack.io/sprite-fight/audio.mp3'
+          break
+        case 'video':
+          this.src = 'https://files.vidstack.io/sprite-fight/720p.mp4'
+          break
+        case 'hls':
+          this.src.value = 'https://files.vidstack.io/sprite-fight/hls/stream.m3u8'
+          break
+        case 'youtube':
+          this.src.value = 'youtube/_cMxraX_5RE'
+          break
+        case 'vimeo':
+          this.src.value = 'vimeo/640499893'
+          break
       }
     },
     // 关闭视频预览
     handleClosePreview () {
-      this.player.pause()
-      this.player.media = null
+      // if (player) {
+      //   // console.log(player.value)
+      //   // player.destroy()
+      // }
+      // debugger
+      // player.media
+      // player.pause()
+      player.media = null
       this.options.keyboard.global = false
       this.show = true
       this.pip = true
@@ -452,6 +548,10 @@ export default {
   }
 }
 
+media-player {
+  //aspect-ratio: 16 / 9;
+}
+
 .video-main {
   width: 100%;
   height: 100%;
@@ -488,8 +588,9 @@ export default {
     }
 
     .header-right {
-      margin-right: 0px;
+      margin-right: 10px;
       width: 200px;
+      min-width: 180px;
       right: 10px;
       height: 60px;
       text-align: right;

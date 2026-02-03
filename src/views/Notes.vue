@@ -223,7 +223,7 @@
     </div>
     <v-contextmenu class="contextmenu" ref="contextmenu" style="width: 120px">
       <template>
-        <v-contextmenu-item style="margin: 3px 0"
+        <v-contextmenu-item style="margin: 3px 0" v-show="selectedFileCount === 1"
 
                             @click="renameDoc(fileList[selectFileIndex])">
           <!--<i class="iconfont icon-wenzishibie v-contextmenu-submenu__icon" style="font-size: 14px">-->
@@ -456,6 +456,7 @@ export default {
         originName: this.fileList[this.selectFileIndex].fileName.replace('.md', ''),
         operation: 'rename'
       }).then(res => {
+        debugger
         if (res.fileName <= 0) {
           this.$toast.error('文件名不能为空')
           return

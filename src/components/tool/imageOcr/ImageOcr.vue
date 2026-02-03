@@ -33,7 +33,7 @@
           <div class="text-list">
             <div class="text-list-item"
                  v-for="(item,index) in res" :key="index">
-              <span class="inline-block-v-middle">{{ item.words }}</span>
+              <span class="inline-block-v-middle">{{ item }}</span>
             </div>
           </div>
         </div>
@@ -91,8 +91,8 @@ export default {
         console.log(res)
         if (res.code === 0) {
           console.log(res.data)
-          this.res = res.data.result.words_result
-          console.log(this.ocrResult)
+          this.res = res.data.result
+          console.log(this.res)
           // this.pageData.total = res.data.total
           // this.loading = false
         } else {

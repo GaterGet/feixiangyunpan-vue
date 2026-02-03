@@ -28,33 +28,52 @@
     </div>
     <!--播放器-->
     <div class="play-box">
-      <vue-plyr :options="options"
-                :type="mode"
-                :invertTime="false"
-                :autoplay="true"
-                v-show="floatSize !== 'min'" ref="plyr"
-                :class="{'default':mode==='default'}">
-        <audio id="player" :controls="controls"
-               ref="=audioPlayer"
-        >
-          <source :src="audioSrc" type="audio/mp3" :data-src="audioSrc"
-                  ref="audioPlayer" />
-        </audio>
+      <media-player :title="songTitle"
+                    view-type="audio"
+                    ref="audioPlayer"
+                    :volume="currentVolume"
+                    @can-play="onCanPlay"
+                    @ended="onEnded"
+                    @volume-change="onVolumeChange"
+                    crossOrigin
+                    @provider-change="onProviderChange"
+      >
+        <media-provider v-if="src">
+          <source :src="src" :data-src="src" type="audio/mp3" :key="src" />
+        </media-provider>
+        <!--thumbnails="https://files.vidstack.io/sprite-fight/thumbnails.vtt"-->
+        <media-audio-layout></media-audio-layout>
+        <!--<media-plyr-layout style="width: 100%">-->
 
-      </vue-plyr>
+        <!--</media-plyr-layout>-->
+      </media-player>
+      <!--<vue-plyr :options="options"-->
+      <!--          :type="mode"-->
+      <!--          :invertTime="false"-->
+      <!--          :autoplay="true"-->
+      <!--          v-show="floatSize !== 'min'" ref="plyr"-->
+      <!--          :class="{'default':mode==='default'}">-->
+      <!--  <audio id="player" :controls="controls"-->
+      <!--         ref="=audioPlayer"-->
+      <!--  >-->
+      <!--    <source :src="audioSrc" type="audio/mp3" :data-src="audioSrc"-->
+      <!--            ref="audioPlayer" />-->
+      <!--  </audio>-->
+
+      <!--</vue-plyr>-->
       <i class="iconfont icon-xuanfuchuang" v-show="mode==='default'" @click="changeMode()"></i>
     </div>
 
     <!--播放列表-->
     <div class="audio-song-list" v-show="mode==='float' && floatSize === 'default'">
       <ul class="list">
-        <li class="item" v-for="(item, index) in audioList" :key="index"
+        <li class="item" v-for="(item, index) in songList" :key="index"
             @click="play(index)"
             :class="songTitle===item.fileName?'active': ''">
           <span :title="item.fileName" class="name cursor-p">{{ item.fileName }}</span>
           <span class="operate">
             <i title="从列表删除" class="iconfont icon-tishicuowu cursor-p" v-show="songTitle!==item.fileName"
-               @click="deleteSong(index)"></i>
+               @click="deleteSong(index, $event)"></i>
           </span>
         </li>
       </ul>
@@ -66,6 +85,18 @@
 </template>
 
 <script>
+// Import styles.
+import 'vidstack/player/styles/default/theme.css'
+import 'vidstack/player/styles/default/layouts/audio.css'
+
+// Register elements.
+import 'vidstack/player'
+import 'vidstack/player/layouts'
+import 'vidstack/player/ui'
+import 'vidstack/bundle'
+import { isHLSProvider } from 'vidstack'
+import { playerConfig } from '@/components/play/player-config.js'
+
 export default {
   name: 'AudioPlayer',
   props: {
@@ -82,10 +113,13 @@ export default {
   components: {},
   data () {
     return {
+      src: '',
       // 播放器实例
-      player: Object,
+      // player: Object,
       // 音频预览组件是否可见
       visible: false,
+      // 当前音量（0-1）
+      currentVolume: 0.5,
       // 歌曲播放标题
       songTitle: '',
       // plyr播放器显示控制器
@@ -171,29 +205,67 @@ export default {
         x: 320,
         y: 60
       },
-      flags: false
+      flags: false,
+      i18n: playerConfig.i18n
     }
   },
-  watch: {},
+  watch: {
+    src (newSrc, oldSrc) {
+      if (newSrc && newSrc !== oldSrc) {
+        console.log('音频源已更新:', newSrc)
+      }
+    }
+  },
   computed: {
     // 获得当前plyr对象
     getPlayer () {
-      return this.$refs.plyr.player
+      return this.$refs['audioPlayer']
+    },
+    // 音频列表
+    audioList () {
+      return this.playList || []
+    },
+    // 默认播放索引
+    defaultIndex () {
+      if (this.file && this.audioList.length > 0) {
+        const index = this.audioList.findIndex(item => item.fileName === this.file.fileName)
+        return index >= 0 ? index : 0
+      }
+      return 0
     }
   },
   created () {
     this.mode = 'float'
   },
   mounted () {
-    this.player = this.getPlayer
-    this.songList = this.audioList
-    this.playIndex = this.defaultIndex
-    this.audioSrc = this.getMediaStreamPath(this.audioList[this.defaultIndex])
-    this.songTitle = this.audioList[this.playIndex].fileName
-    this.player.on('pause', () => this.pauseAction())
-    this.player.on('ended', () => this.endedAction(this.playIndex))
+    this.$nextTick(() => {
+      // 初始化国际化
+      setTimeout(() => {
+        this.initI18n()
+      }, 100)
+
+      // 初始化播放列表（创建副本，以便可以独立修改）
+      this.songList = [...this.audioList]
+      this.playIndex = this.defaultIndex
+
+      if (this.songList && this.songList.length > 0) {
+        this.src = this.getMediaStreamPath(this.songList[this.defaultIndex])
+        this.songTitle = this.songList[this.playIndex].fileName
+        this.visible = true
+        console.log('音频播放器初始化完成，歌曲数:', this.songList.length)
+      }
+    })
   },
   methods: {
+    initI18n () {
+      let layout = document.querySelector('media-plyr-layout')
+      if (!layout) {
+        layout = document.querySelector('media-audio-layout')
+      }
+      if (layout && this.i18n) {
+        layout.translations = this.i18n
+      }
+    },
     // 暂停事件
     pauseAction () {
     },
@@ -205,31 +277,122 @@ export default {
       }
     },
     // 播放
-    play (index) {
+    async play (index) {
+      console.log('播放index', index)
+      const player = this.getPlayer
+      if (!player) {
+        console.error('播放器未初始化')
+        return
+      }
+
+      // 检查索引是否有效
+      if (index < 0 || index >= this.songList.length) {
+        console.error('无效的播放索引:', index)
+        return
+      }
+
       // 当点击列表时点击和当前播放歌曲相同则暂停,暂停时则播放
       if (index === this.playIndex) {
-        if (this.player.playing) {
-          this.player.pause()
+        if (player.playing) {
+          player.pause()
         } else {
-          this.player.play()
+          try {
+            await player.play()
+          } catch (err) {
+            console.error('播放失败:', err)
+          }
         }
       } else {
-        this.playIndex = index
-        this.songTitle = this.audioList[index].fileName
-        // this.$refs.plyr.player.media.src = this.preFix + this.audioList[index].fileName
-        this.player.media.src = this.getMediaStreamPath(this.audioList[index])
-        // this.preFix + this.audioList[index].fileName
-        this.player.play()
+        // 切换歌曲
+        try {
+          console.log('=== 开始切换歌曲 ===')
+
+          // 1. 暂停当前播放
+          player.pause()
+
+          // 2. 更新索引和标题
+          this.playIndex = index
+          this.songTitle = this.songList[index].fileName
+          console.log('新歌曲标题:', this.songTitle)
+
+          // 3. 先清空 src，这会移除 media-provider（因为 v-if="src"）
+          this.src = ''
+          console.log('清空 src，等待 DOM 更新...')
+          await this.$nextTick()
+
+          // 4. 短暂延迟，确保 vidstack 完全卸载
+          await new Promise(resolve => setTimeout(resolve, 50))
+
+          // 5. 设置新的音频地址
+          const newSrc = this.getMediaStreamPath(this.songList[index])
+          console.log('设置新歌曲地址:', newSrc)
+          this.src = newSrc
+
+          // 6. 等待 Vue 重新创建 media-provider，vidstack 会自动加载并触发 can-play 事件
+          await this.$nextTick()
+          console.log('=== 歌曲切换完成，等待加载 ===')
+        } catch (err) {
+          console.error('切换歌曲失败:', err)
+        }
       }
     },
+    onCanPlay (event) {
+      console.log('=== onCanPlay 事件触发 ===')
+      console.log('当前歌曲:', this.songTitle)
+      console.log('当前 src:', this.src)
+      const player = this.getPlayer
+      if (player) {
+        console.log('播放器状态 - playing:', player.playing, 'paused:', player.paused)
+        // 自动播放新加载的音频
+        player.play().then(() => {
+          console.log('播放成功')
+        }).catch(err => {
+          console.error('自动播放失败:', err)
+        })
+      } else {
+        console.error('播放器未找到')
+      }
+    },
+    onEnded () {
+      console.log('当前歌曲播放结束')
+      // 自动播放下一首
+      this.endedAction(this.playIndex)
+    },
+    onVolumeChange (event) {
+      // 当用户调整音量时，保存音量设置
+      const newVolume = event.detail
+      console.log('音量变化:', newVolume)
+      this.currentVolume = newVolume
+    },
+    onProviderChange (event) {
+      const provider = event.detail
+      // We can configure provider's here.
+      if (isHLSProvider(provider)) {
+        provider.config = {}
+      }
+    },
+
     // 关闭播放窗口
     closeFloatWindow () {
-      const audio = document.getElementById('player')
-      audio.pause()
-      this.player.media = null
+      console.log('关闭播放窗口')
+      const player = this.getPlayer
+      if (player) {
+        try {
+          player.pause()
+          // 清空播放源
+          player.src = ''
+        } catch (err) {
+          console.error('停止播放失败:', err)
+        }
+      }
+      this.src = ''
       this.options.keyboard.global = false
       this.visible = false
-      this.callback('cancel')
+
+      // 调用回调函数通知外部组件
+      if (typeof this.callback === 'function') {
+        this.callback('cancel')
+      }
     },
     // 修改窗口模式    !已弃用!
     changeMode (mode) {
@@ -248,8 +411,33 @@ export default {
       }
     },
     // 删除播放列表歌曲
-    deleteSong (index) {
-      this.audioList.splice(index, 1)
+    deleteSong (index, event) {
+      // 阻止事件冒泡，避免触发 play
+      if (event) {
+        event.stopPropagation()
+      }
+
+      // 从 songList 中删除
+      this.songList.splice(index, 1)
+
+      // 如果删除的是当前播放的歌曲之前的歌曲，需要调整 playIndex
+      if (index < this.playIndex) {
+        this.playIndex--
+      } else if (index === this.playIndex) {
+        // 如果删除的是当前播放的歌曲，停止播放
+        const player = this.getPlayer
+        if (player) {
+          player.pause()
+        }
+        // 如果还有歌曲，播放下一首
+        if (this.songList.length > 0) {
+          this.playIndex = Math.min(this.playIndex, this.songList.length - 1)
+          this.play(this.playIndex)
+        } else {
+          // 没有歌曲了，关闭播放器
+          this.closeFloatWindow()
+        }
+      }
     },
     // 拖动浮窗事件
     mousedown (event) {
@@ -279,6 +467,21 @@ export default {
 </script>
 
 <style lang="less" scoped>
+
+.player[data-view-type='audio'] {
+  --media-tooltip-y-offset: 44px;
+  --media-menu-y-offset: 40px;
+  --media-slider-chapter-title-color: black;
+  --media-border-radius: 4px;
+  background-color: #212121;
+  border-radius: var(--media-border-radius);
+  contain: layout;
+}
+
+media-provider audio {
+  display: none !important;
+}
+
 .icon-xuanfuchuang {
   display: inline-block;
 }
@@ -286,6 +489,7 @@ export default {
 .audio-main.default {
   position: absolute !important;
 }
+
 
 .audio-main.float {
   position: absolute;
@@ -324,6 +528,10 @@ export default {
 
   .bold {
     font-weight: 700;
+  }
+
+  .play-box {
+    width: 100%;
   }
 
   .audio-song-title {

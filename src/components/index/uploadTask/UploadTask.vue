@@ -663,11 +663,11 @@ export default {
     font-size: 16px;
   }
 
-  /deep/ .uploader-file-icon {
+  :deep(.uploader-file-icon ) {
     display: none;
   }
 
-  /deep/ .uploader-file-actions > span {
+  :deep(.uploader-file-actions > span ) {
     margin-right: 6px;
   }
 }

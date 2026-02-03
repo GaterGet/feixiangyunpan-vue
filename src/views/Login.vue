@@ -164,7 +164,7 @@ export default {
   watch: {},
   created () {
     this.removeCookies('token')
-    this.enableCaptcha = JSON.parse(localStorage.getItem('systemConfig')).enableCaptcha === '1'
+    // this.enableCaptcha = JSON.parse(localStorage.getItem('systemConfig')).enableCaptcha === '1'
     this.activeName = this.$route.query.action || 'login'
     localStorage.removeItem('token')
     localStorage.removeItem('userInfo')
@@ -361,12 +361,12 @@ export default {
   height: 330px;
 }
 
-.el-form /deep/ .el-form-item__content {
+.el-form :deep(.el-form-item__content ) {
   margin: 0 !important;
   padding: 0 20px;
 }
 
-.el-input /deep/ input {
+.el-input :deep(input) {
   border-radius: 10px;
 }
 
@@ -378,31 +378,31 @@ export default {
   margin-top: 20px;
 }
 
-.el-tabs /deep/ .is-active,
-.el-tabs /deep/ div:hover {
+.el-tabs :deep(.is-active),
+.el-tabs :deep(div:hover) {
   color: #06a7ff;
 }
 
-.el-tabs /deep/ .is-active {
+.el-tabs :deep(.is-active ) {
   background-color: #fff;
 }
 
-.el-tabs /deep/ .el-tabs__item {
+.el-tabs :deep(.el-tabs__item ) {
   border: none !important;
   font-size: 18px;
   height: 50px;
   line-height: 50px;
 }
 
-.el-tabs /deep/ .el-tabs__nav {
+.el-tabs :deep(.el-tabs__nav ) {
   border: none;
 }
 
-.el-tabs /deep/ .el-tabs__nav-scroll {
+.el-tabs :deep(.el-tabs__nav-scroll ) {
   background-color: #f5f5f6;
 }
 
-.el-input /deep/ .el-input__inner {
+.el-input :deep(.el-input__inner ) {
   height: 48px;
   font-size: 15px;
 }

@@ -309,12 +309,9 @@ export default {
             }
           })
         } else {
-          var file = this.fileList.filter(item => item.filePath === oldVal)
           data = {
             path: newVal,
             userId: this.shareUser.id
-            // userId: file[0].userId,
-            // fileId: file[0].parentPathId
           }
           getShareFileList(data).then(res => {
             if (res.code === 0) {

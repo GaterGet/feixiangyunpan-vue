@@ -401,7 +401,8 @@
                   {{ item.fileName !== undefined ? item.fileName : '' }}
                 </p>
                 <p class="grid-list__item-desc text-ellip" :title="item.fileUpdateTime">
-                  {{ item.fileUpdateTime.slice(5) }}
+                  {{ compareYear(parseInt(new Date(item.fileUpdateTime).getFullYear())) ? dayjs(item.fileUpdateTime).format('YYYY-MM-DD HH:mm:ss') : dayjs(item.fileUpdateTime).format('YYYY-MM-DD HH:mm:ss').slice(5)
+                  }}
                 </p>
               </div>
             </div>
@@ -969,6 +970,7 @@ import { getUserInfo } from '@/request/user'
 import { blankMenuList, conversionExtList, defaultMenuList, multiMenuList } from '@/libs/map'
 import Vue from 'vue'
 import { debounce } from '@/utils/utils'
+import dayjs from 'dayjs'
 
 var websocket
 let unzipTimer
@@ -985,6 +987,7 @@ export default {
   },
   data () {
     return {
+      currentYear: parseInt(new Date().getFullYear()),
       defaultMenuList,
       multiMenuList,
       blankMenuList,
@@ -1344,6 +1347,14 @@ export default {
     // 离开页面生命周期函数
   },
   methods: {
+    dayjs,
+    compareYear: function(val) {
+      if (parseInt(val) < this.currentYear) {
+        return true
+      } else {
+        return false
+      }
+    },
     createWebSocket (userId, fileId, path) {
       if (!websocket) {
         // return new WebSocket('ws://localhost:8080/api/push/websocket/?uid' + userId + '&fid' + fileId)

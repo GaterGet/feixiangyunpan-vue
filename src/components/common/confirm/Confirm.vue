@@ -700,13 +700,10 @@ export default {
       this.expiredTime = t
       this.showSelectExpired = false
       this.resolveData.expiredTime = t
-      console.log(this.resolveData)
       store.commit('updateExpiredTime', t)
-      console.log('过期时间为:' + t)
     },
     showSelectExpiredDropdown () {
       this.showSelectExpired = !this.showSelectExpired
-      console.log(this.showSelectExpired)
     },
     useShareCode (e) {
       this.enableShareCode = !this.enableShareCode
@@ -773,14 +770,15 @@ export default {
       // this.$refs.formRef.resetFields()
       // Object.assign(this.$data, this.$options.data.call(this))
     },
-    yesClick () {
+    yesClick (ev) {
       var self = document.querySelector('.dialog-common-header')
-
+      const obj = {}
       console.log('选择文件夹:' + this.fullPath)
       this.resolveData.filePath = this.fullPath
-      console.log(this.resolveData.filePath)
+      this.resolveData.fileName = this.renameFileName
+      Object.assign(obj, this.resolveData)
       this.show = false
-      this.promiseStatus && this.promiseStatus.resolve(this.resolveData)
+      this.promiseStatus && this.promiseStatus.resolve(obj)
       document.body.removeChild(self)
     },
     alertClick () {
@@ -789,10 +787,6 @@ export default {
     },
     focus (event) {
       event.currentTarget.select()
-    },
-    closeConfirm () {
-      this.visible = false
-      this.callback('cancel')
     }
   },
   destroyed () {

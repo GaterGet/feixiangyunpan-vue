@@ -12,12 +12,9 @@ let audioPreviewInstance = null
 const initInstanceAudioPreview = (audioObj, audioList, defaultIndex) => {
   audioPreviewInstance = new AudioPreviewConstructor({
     el: document.createElement('div'),
-    data() {
-      return {
-        audioObj,
-        audioList,
-        defaultIndex
-      }
+    propsData: {
+      file: audioObj,
+      playList: audioList
     }
   })
 }

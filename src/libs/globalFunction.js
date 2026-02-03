@@ -176,6 +176,9 @@ const globalFunction = {
    */
   getFileCreateTimeStamp (row) {
     // 转换时间戳
+    if (typeof row.fileCreateTime === 'number') {
+      return row.fileCreateTime
+    }
     var date = row.fileCreateTime
     date = date.substring(0, 19)
     date = date.replace(/-/g, '/') // 必须把日期'-'转为'/'
@@ -853,6 +856,7 @@ const globalFunction = {
     if (path === this.$route.query.filePath) {
       this.selectedFileCount = 0
     }
+    debugger
     const data = {
       userId: this.getCookies('uid'),
       filePath: path === '' ? '/' : path,

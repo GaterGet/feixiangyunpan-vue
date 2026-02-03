@@ -2,12 +2,16 @@
 // const BASE_URL = process.env.NODE_ENV === 'production' ? '/pan' : '/'
 
 const HardSourceWebpackPlugin = require('hard-source-webpack-plugin')
-// const TerserPlugin = require('terser-webpack-plugin')
+const TerserPlugin = require('terser-webpack-plugin')
 // const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 //  TODO 打包时把以下代码注释取消
 const webpack = require('webpack')
 const CompressionPlugin = require('compression-webpack-plugin')
 const { codeInspectorPlugin } = require('code-inspector-plugin')
+
+const nodeVersion = process.env.NODE_VERSION
+console.log(nodeVersion)
+
 module.exports = {
   publicPath: process.env.NODE_ENV === 'production' ? '/pan' : '/', // 打包配置
   assetsDir: 'static', // 静态资源保存路径
@@ -108,22 +112,22 @@ module.exports = {
     }
   },
   configureWebpack: {
-    // optimization: {
-    //   minimize: true,
-    //   minimizer: [
-    //     new TerserPlugin({
-    //       terserOptions: {
-    //         compress: {
-    //           drop_console: true,
-    //           drop_debugger: false,
-    //           pure_funcs: ['console.log'] // 移除console
-    //         },
-    //         cache: true, // 是否缓存
-    //         parallel: 4 // 是否并行打包,多线程
-    //       }
-    //     })
-    //   ]
-    // },
+    optimization: {
+      minimize: true,
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              drop_console: true,
+              drop_debugger: false,
+              pure_funcs: ['console.log'] // 移除console
+            },
+            cache: true, // 是否缓存
+            parallel: 4 // 是否并行打包,多线程
+          }
+        })
+      ]
+    },
     plugins: [
       // 缓存提供启动速度
       new HardSourceWebpackPlugin({
@@ -159,7 +163,7 @@ module.exports = {
       //   logLevel: 'info'
       // }),
       //  TODO 打包时把以下代码注释取消
-      new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+      // new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
       // 压缩成 .gz 文件
       new CompressionPlugin({
         filename: '[path][base].gz',
